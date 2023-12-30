@@ -13,7 +13,7 @@ export const ButtonContainerA: React.FunctionComponent<
 > = ({ children, ...props }) => (
   <TouchableOpacity
     {...props}
-    className='w-4/5 flex-row h-12 snap-center justify-center rounded-xl my-1 bg-black'>
+    className='w-4/5 flex-row h-12 snap-center justify-center rounded-xl my-2 bg-black'>
     {children}
   </TouchableOpacity>
 )
