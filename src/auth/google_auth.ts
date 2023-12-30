@@ -26,6 +26,7 @@ export const coerce_to_google_sign_in_error_or_bail = (error: any) => {
 }
 
 export const google_auth_login = async () => {
-  await GoogleSignin.hasPlayServices()
-  return GoogleSignin.signIn()
+  if (await GoogleSignin.hasPlayServices()) {
+    return GoogleSignin.signIn()
+  }
 }

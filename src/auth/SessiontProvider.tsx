@@ -1,18 +1,30 @@
-import React, { ReactNode, createContext, useContext, useState } from 'react'
+import {
+  ReactNode,
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+} from 'react'
 import { Auth0Provider, useAuth0 } from 'react-native-auth0'
 import { apple_auth_login } from './apple_auth'
+import { coerce_to_google_sign_in_error_or_bail } from './google_auth'
 import {
-  coerce_to_google_sign_in_error_or_bail,
-  google_auth_login,
-} from './google_auth'
-import { statusCodes } from '@react-native-google-signin/google-signin'
+  statusCodes,
+  GoogleSignin,
+  // type OneTapUser,
+} from '@react-native-google-signin/google-signin'
 export { apple_auth_login } from './apple_auth'
 export { auth0_loging } from './auth0_auth'
 import { type Auth0ContextInterface } from 'react-native-auth0/lib/typescript/src/hooks/auth0-context'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 
-type LoadingMethods = 'apple' | 'google' | 'auth0'
+const LoginMethodsNames = ['apple', 'google', 'auth0']
+type LogingMethods = (typeof LoginMethodsNames)[number]
 type Auth =
-  | { provider: 'google'; user: Awaited<ReturnType<typeof google_auth_login>> }
+  | {
+      provider: 'google'
+      user: Awaited<ReturnType<typeof GoogleSignin.signIn>>
+    }
   | { provider: 'apple'; user: Awaited<ReturnType<typeof apple_auth_login>> }
   | {
       provider: 'auth0'
@@ -22,7 +34,7 @@ type Auth =
     }
 
 interface SessionData {
-  loading: LoadingMethods | false
+  loading: LogingMethods | false
   auth?: Auth
   error?: any
   handleAppleSignIn(): void
@@ -45,9 +57,66 @@ type SessionProviderProps = {
 
 const SessionProviderInner: React.FC<SessionProviderProps> = ({ children }) => {
   const auth0 = useAuth0()
-  const [loading, setLoading] = useState<LoadingMethods | false>(false)
+  const [initializing, setSetInitializing] = useState(true)
+  const [loading, setLoading] = useState<LogingMethods | false>(false)
   const [auth, setAuth] = useState<Auth>()
   const [error, setError] = useState<any>()
+
+  useEffect(() => {
+    if (initializing) {
+      AsyncStorage.getItem('auth').then(async data => {
+        if (typeof data === 'string' && LoginMethodsNames.includes(data)) {
+          const d = data as LogingMethods
+          switch (d) {
+            case 'apple': {
+              setSetInitializing(false)
+              break
+            }
+            case 'auth0': {
+              try {
+                const user = await auth0.getCredentials()
+                setAuth({
+                  provider: 'auth0',
+                  user,
+                })
+              } catch (e) {
+                console.log('Failed getting auth0 creds', e)
+              } finally {
+                setSetInitializing(false)
+              }
+              break
+            }
+            case 'google': {
+              setLoading('google')
+              GoogleSignin.signInSilently()
+                .then(() => {})
+                .finally(() => {
+                  setSetInitializing(false)
+                })
+
+              break
+            }
+          }
+        }
+      })
+      setSetInitializing(true)
+    }
+  }, [initializing, auth0])
+
+  useEffect(() => {
+    switch (auth?.provider) {
+      case 'apple': {
+        break
+      }
+      case 'auth0': {
+        break
+      }
+      case 'google': {
+        break
+      }
+    }
+    auth0.getCredentials()
+  }, [auth?.user, auth?.provider, auth0])
 
   const handleAppleSignIn = async () => {
     if (loading) {
@@ -110,7 +179,9 @@ const SessionProviderInner: React.FC<SessionProviderProps> = ({ children }) => {
     }
     setLoading('google')
     try {
-      google_auth_login()
+      if (await GoogleSignin.hasPlayServices()) {
+        return GoogleSignin.signIn()
+      }
     } catch (e) {
       switch (coerce_to_google_sign_in_error_or_bail(e)) {
         case statusCodes.SIGN_IN_CANCELLED: {
@@ -128,6 +199,7 @@ const SessionProviderInner: React.FC<SessionProviderProps> = ({ children }) => {
         default: {
         }
       }
+    } finally {
       setLoading(false)
     }
   }

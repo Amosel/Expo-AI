@@ -6,6 +6,12 @@ import { useSession } from '~/auth'
 
 export default function AppLayout() {
   const { loading, auth, error } = useSession()
+  console.log({
+    auth,
+    loading,
+    error,
+  })
+
   if (loading) {
     return (
       <View className='flex-1 justify-center items-center bg-lightWhite'>
