@@ -1,17 +1,42 @@
-import { Redirect, Stack } from 'expo-router'
+import { SplashScreen, Redirect, Stack } from 'expo-router'
+import FontAwesome from '@expo/vector-icons/FontAwesome'
+import { useFonts } from 'expo-font'
 import { View } from '~/design/view'
 import { Text } from '~/design/typography'
 import { ActivityIndicator } from 'react-native'
 import { useAuth } from '~/auth'
+import { useEffect } from 'react'
+
+// Prevent the splash screen from auto-hiding before asset loading is complete.
+SplashScreen.preventAutoHideAsync()
 
 export default function AppLayout() {
+  const [loaded, error] = useFonts({
+    SpaceMono: require('~/assets/fonts/SpaceMono-Regular.ttf'),
+    ...FontAwesome.font,
+  })
+
   const { initializing, user } = useAuth()
+
   console.log('\n\nLayout: ', {
     initializing,
     user,
   })
 
-  if (initializing) {
+  useEffect(() => {
+    if (loaded) {
+      SplashScreen.hideAsync()
+    }
+  }, [loaded])
+
+  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
+  useEffect(() => {
+    if (error) {
+      throw error
+    }
+  }, [error])
+
+  if (!loaded) {
     return (
       <View className='flex-1 justify-center items-center bg-lightWhite'>
         <ActivityIndicator />
@@ -29,5 +54,10 @@ export default function AppLayout() {
   }
 
   // This layout can be deferred because it's not the root layout.
-  return <Stack />
+  return (
+    <Stack>
+      <Stack.Screen name='(tabs)' options={{ headerShown: false }} />
+      <Stack.Screen name='modal' options={{ presentation: 'modal' }} />
+    </Stack>
+  )
 }
