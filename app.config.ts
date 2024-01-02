@@ -44,14 +44,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         },
       },
     ],
-    [
-      'react-native-auth0',
-      {
-        domain: process.env.EXPO_PUBLIC_AUTH0_DOMAIN,
-      },
-    ],
     'expo-apple-authentication',
     '@react-native-google-signin/google-signin',
+    '@react-native-firebase/app',
   ],
   experiments: {
     typedRoutes: true,

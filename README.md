@@ -9,7 +9,15 @@
 
 ## iOS 
 ### Signing workaround
-- the new version of app.config.js does not see to accept appleTeamId, instead we use `DEVELOPMENT_TEAM=XXXXXXXXXX bun ios` to run.
+- the new version of `app.config.js` does not see to accept appleTeamId, instead we use `DEVELOPMENT_TEAM=XXXXXXXXXX bun ios` to run.
   
 ### Building on device: 
 `DEVELOPMENT_TEAM=XXXXXXXXXX bun expo run:ios -d`
+
+## Secret Keys:
+
+### Firebase
+
+`google-service.json` and `GoogleService-Info.plist` are required, and are using by the native build process. Get them from the firebase console.
+
+### Env
