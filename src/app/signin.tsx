@@ -17,7 +17,7 @@ export default function Root() {
     onAppleButtonPress,
     onSignUpButtonPress,
     onEmailLoginButtonPress,
-    onGoogleButtonPress
+    onGoogleButtonPress,
   } = useAuth()
 
   // TODO: I expected (app)/_layout.tsx to re-evaluate when serss not refresh after user changes.

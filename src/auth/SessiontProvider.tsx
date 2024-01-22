@@ -83,6 +83,8 @@ async function onGoogleButtonPress() {
   return auth().signInWithCredential(googleCredential)
 }
 
+let once = true
+
 export const SessionProvider: React.FC<{
   children: ReactNode
 }> = ({ children }) => {
@@ -95,10 +97,20 @@ export const SessionProvider: React.FC<{
       if (initializing) {
         setInitializing(false)
       }
-      console.log('User update', user)
     })
     return subscriber // unsubscribe on unmount
   }, [initializing, user])
+
+  useEffect(() => {
+    if (user && once) {
+      once = false
+      console.log('Auth User')
+      // console.log('Auth User', JSON.stringify(user, null, 2))
+    } else if (!user && !once) {
+      once = true
+      console.log('logged out')
+    }
+  }, [user])
 
   // Provide the authentication functions and session data to the context
   return (

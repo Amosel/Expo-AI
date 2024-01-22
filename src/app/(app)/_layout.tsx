@@ -6,6 +6,16 @@ import { Text } from '~/design/typography'
 import { ActivityIndicator } from 'react-native'
 import { useAuth } from '~/auth'
 import { useEffect } from 'react'
+import NetInfo from '@react-native-community/netinfo'
+import { onlineManager } from '@tanstack/react-query'
+import { queryClient } from '~/query'
+import { QueryClientProvider } from '@tanstack/react-query'
+
+onlineManager.setEventListener(setOnline => {
+  return NetInfo.addEventListener(state => {
+    setOnline(!!state.isConnected)
+  })
+})
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync()
@@ -16,12 +26,7 @@ export default function AppLayout() {
     ...FontAwesome.font,
   })
 
-  const { initializing, user } = useAuth()
-
-  console.log('\n\nLayout: ', {
-    initializing,
-    user,
-  })
+  const { user } = useAuth()
 
   useEffect(() => {
     if (loaded) {
@@ -54,10 +59,10 @@ export default function AppLayout() {
   }
 
   // This layout can be deferred because it's not the root layout.
+
   return (
-    <Stack>
-      <Stack.Screen name='(tabs)' options={{ headerShown: false }} />
-      <Stack.Screen name='modal' options={{ presentation: 'modal' }} />
-    </Stack>
+    <QueryClientProvider client={queryClient}>
+      <Stack />
+    </QueryClientProvider>
   )
 }
