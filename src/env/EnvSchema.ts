@@ -5,7 +5,7 @@ export const EnvSchema = z.object({
   gptDefaultModel: ModelSchema,
   gptFallbackModel: ModelSchema,
   gptServiceUrl: z.string().url(),
-  apiKey: z.string()
+  apiKey: z.string(),
 })
 
 export type EnvType = z.infer<typeof EnvSchema>
@@ -21,5 +21,5 @@ export const getEnv = () =>
     gptDefaultModel: process.env.EXPO_PUBLIC_GPT_DEFAULT_MODEL,
     gptFallbackModel: process.env.EXPO_PUBLIC_GPT_FALLBACK_MODEL,
     gptServiceUrl: process.env.EXPO_PUBLIC_GPT_SERVICE_URL,
-    apiKey: process.env.EXPO_PUBLIC_API_KEY
+    apiKey: process.env.EXPO_PUBLIC_API_KEY,
   })

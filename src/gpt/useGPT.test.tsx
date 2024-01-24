@@ -16,7 +16,7 @@ describe('useGPT', () => {
     gptDefaultModel: 'gpt-4',
     gptFallbackModel: 'gpt-3.5-turbo',
     gptServiceUrl: 'https://exmaple.com',
-    apiKey: 'key'
+    apiKey: 'key',
   }
 
   const analyticsCatchErrorEvent = jest.fn()

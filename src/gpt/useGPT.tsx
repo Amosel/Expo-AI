@@ -24,15 +24,21 @@ export default function useGPT(personaId: string) {
 
   const send = useCallback(
     async (messages: GPTMessage[]) =>
-      axios.post<{ message: any }>(config.gptServiceUrl, {
-        persona: personaId,
-        model: model.current,
-        apiKey: config.apiKey,
-        messages: JSON.stringify(messages),
-      }, {
-        headers: new AxiosHeaders({ Authorization: auth.token ? `Bearer ${auth.token}` : ''})
-      }),
-    [config.gptServiceUrl, personaId, auth.token],
+      axios.post<{ message: any }>(
+        config.gptServiceUrl,
+        {
+          persona: personaId,
+          model: model.current,
+          apiKey: config.apiKey,
+          messages: JSON.stringify(messages),
+        },
+        {
+          headers: new AxiosHeaders({
+            Authorization: auth.token ? `Bearer ${auth.token}` : '',
+          }),
+        },
+      ),
+    [config.gptServiceUrl, config.apiKey, personaId, auth.token],
   )
 
   /// Send Fallback Request
@@ -53,7 +59,10 @@ export default function useGPT(personaId: string) {
       send(messages)
         .then(response => {
           const { message } = response.data
-          console.log('API: Message Received', { message, model: model.current })
+          console.log('API: Message Received', {
+            message,
+            model: model.current,
+          })
 
           //** [BUG] duplicate agent messages
           //Fetch Last 'assistant' message
@@ -108,23 +117,29 @@ export default function useGPT(personaId: string) {
           if (error.response) {
             // The request was made and the server responded with a status code
             // that falls out of the range of 2xx
-            console.log(error.response.data);
-            console.log(error.response.status);
-            console.log(error.response.headers);
+            console.log(error.response.data)
+            console.log(error.response.status)
+            console.log(error.response.headers)
           } else if (error.request) {
             // The request was made but no response was received
             // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
             // http.ClientRequest in node.js
-            console.log(error.request);
+            console.log(error.request)
           } else {
             // Something happened in setting up the request that triggered an Error
-            console.log('Error', error.message);
+            console.log('Error', error.message)
           }
 
-          if (model.current && ['roleplay', 'roleplaylite'].includes(model.current)) {
+          if (
+            model.current &&
+            ['roleplay', 'roleplaylite'].includes(model.current)
+          ) {
             console.warn(
               '(i) sendMessage() GPT API Failure -- Fallback to GPT3',
-              { model: model.current, error: `${error.code}: ${error.message}` },
+              {
+                model: model.current,
+                error: `${error.code}: ${error.message}`,
+              },
             )
             analyticsCatchErrorEvent(error, { dev: 'fallback to GPT3' })
             return sendFallback(messages, error)

@@ -1,6 +1,5 @@
-import Constants from 'expo-constants';
-
+import Constants from 'expo-constants'
 
 export default {
-  name: Constants.expoConfig?.name
+  name: Constants.expoConfig?.name,
 }

@@ -9,7 +9,7 @@ export const isAnalyticsEnabled = () => {
     window.location.href.includes('localhost')
   return (
     !isLocalhost ||
-    process.env.EXPO_PUBLIC_ANALYTICS_LOCALHOST_ENABLE != 'false'
+    process.env.EXPO_PUBLIC_ANALYTICS_LOCALHOST_ENABLE !== 'false'
   )
 }
 
