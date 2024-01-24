@@ -5,7 +5,7 @@
     "react/react-in-jsx-scope": "off",
     "jsx-quotes": ["error", "prefer-single"],
     "semi": ["error", "never"],
-    "react/no-unstable-nested-components": ["error", "never"]
+    "react/no-unstable-nested-components": ["off", "never"]
   }
 }
 
