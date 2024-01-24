@@ -1,6 +1,7 @@
 // AI Personas
 
 export type Profile = (typeof personas)[number]
+export type PersonaId = (typeof personas)[number]['id']
 export const host = 'https://guru.expertsystems.app'
 
 export const personas = [

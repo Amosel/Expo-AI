@@ -10,6 +10,8 @@ import NetInfo from '@react-native-community/netinfo'
 import { onlineManager } from '@tanstack/react-query'
 import { queryClient } from '~/query'
 import { QueryClientProvider } from '@tanstack/react-query'
+import { AnalyticsProvider, analyticsCalls } from '~/analytics'
+import { EnvProvider, getEnv } from '~/env'
 
 onlineManager.setEventListener(setOnline => {
   return NetInfo.addEventListener(state => {
@@ -61,8 +63,12 @@ export default function AppLayout() {
   // This layout can be deferred because it's not the root layout.
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <Stack />
-    </QueryClientProvider>
+    <EnvProvider env={getEnv()}>
+      <QueryClientProvider client={queryClient}>
+        <AnalyticsProvider calls={analyticsCalls}>
+          <Stack />
+        </AnalyticsProvider>
+      </QueryClientProvider>
+    </EnvProvider>
   )
 }

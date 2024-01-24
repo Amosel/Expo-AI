@@ -1,71 +1,51 @@
-import { analyticsCatchErrorEvent, analyticsEvent } from '~/analytics'
 import { useCallback, useRef } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { SupportedModel } from './types'
 import { ChatCompletionMessage } from 'openai/resources'
-import { GPTMessage } from '~/messages/useMessageStore'
-import axios from 'axios'
-import { z } from 'zod'
-
-const ModelSchema = z.enum([
-  'gpt-4',
-  'gpt-3.5-turbo',
-  'gpt-4-1106-preview',
-  'roleplay',
-  'roleplaylite',
-])
-
-const ConfigSchema = z.object({
-  defaultModel: ModelSchema,
-  fallbackModel: ModelSchema,
-  uri: z.string().url(),
-})
-
-const config = ConfigSchema.parse({
-  defaultModel: process.env.EXPO_PUBLIC_GPT_MODEL as SupportedModel,
-  fallbackModel: process.env.EXPO_PUBLIC_GPT_FALLBACK_MODEL as SupportedModel,
-  uri: process.env.EXPO_PUBLIC_GPT_SERVICE_URL as string,
-})
+import axios, { AxiosHeaders } from 'axios'
+import { GPTMessage, SupportedModel } from './types'
+import { useEnv } from '~/env'
+import { useAnalytics } from '~/analytics'
+import { useAuth } from '~/auth'
 /**
  * Wrapper for ChatGPT Functions
  */
 
-// const uri = 'https://convo-q2ifyofooa-uc.a.run.app'
-// const uri = "http://127.0.0.1:5001/aiexpert-yes/us-central1/convo";   //Simulated
+// TODO: axios interceptors:
+// //Log
+// process.env.NODE_ENV === 'development' && console.log("API: Message Send", { uri, params });
 
 export default function useGPT(personaId: string) {
+  const config = useEnv()
+  const auth = useAuth()
+  const { analyticsCatchErrorEvent, analyticsEvent } = useAnalytics()
+
   //Clientside model selection
-  const model = useRef<SupportedModel>(config.defaultModel)
+  const model = useRef<SupportedModel>(config.gptDefaultModel)
 
   const send = useCallback(
     async (messages: GPTMessage[]) =>
-      axios.post<{ message: any }>(config.uri, {
+      axios.post<{ message: any }>(config.gptServiceUrl, {
         persona: personaId,
         model: model.current,
+        apiKey: config.apiKey,
         messages: JSON.stringify(messages),
+      }, {
+        headers: new AxiosHeaders({ Authorization: auth.token ? `Bearer ${auth.token}` : ''})
       }),
-    [personaId],
+    [config.gptServiceUrl, personaId, auth.token],
   )
 
   /// Send Fallback Request
   const sendFallback = useCallback(
     async (messages: GPTMessage[], error: any) => {
-      if (model.current !== config.fallbackModel) {
-        /* REMOVED - Stting Default Model on Persona Change
-                      //Restore after a short vacation
-                      setTimeout(() => {
-                          isDevelopment() && console.warn("(i) Setting Model back to "+model);
-                          model && setModel?.(model)
-                      } , config.fallbackTime);
-                      */
-        //Remember Model Fallback
-        model.current = config.fallbackModel
+      if (model.current !== config.gptFallbackModel) {
+        model.current = config.gptFallbackModel
         return send(messages)
       } else {
         throw error
       }
     },
-    [send],
+    [config.gptFallbackModel, send],
   )
 
   const sendMessageDirect = useCallback(
@@ -73,7 +53,7 @@ export default function useGPT(personaId: string) {
       send(messages)
         .then(response => {
           const { message } = response.data
-          console.log('API: Message Received', { message, model })
+          console.log('API: Message Received', { message, model: model.current })
 
           //** [BUG] duplicate agent messages
           //Fetch Last 'assistant' message
@@ -98,7 +78,7 @@ export default function useGPT(personaId: string) {
           analyticsEvent('message_received', {
             event_category: 'chat',
             persona: personaId,
-            model,
+            model: model.current,
             message,
           })
 
@@ -107,7 +87,7 @@ export default function useGPT(personaId: string) {
             if (message?.error?.error?.type === 'insufficient_quota') {
               analyticsCatchErrorEvent(message?.error?.error?.type, {
                 personaId,
-                model,
+                model: model.current,
                 data: message,
               })
             }
@@ -116,7 +96,7 @@ export default function useGPT(personaId: string) {
               `[CAUGHT] Failure Type:${message?.error?.error?.type}`,
               {
                 personaId,
-                model,
+                model: model.current,
                 data: message,
               },
             )
@@ -125,10 +105,26 @@ export default function useGPT(personaId: string) {
           return message
         })
         .catch((error: any) => {
-          if (model && ['roleplay', 'roleplaylite'].includes(model.current)) {
+          if (error.response) {
+            // The request was made and the server responded with a status code
+            // that falls out of the range of 2xx
+            console.log(error.response.data);
+            console.log(error.response.status);
+            console.log(error.response.headers);
+          } else if (error.request) {
+            // The request was made but no response was received
+            // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
+            // http.ClientRequest in node.js
+            console.log(error.request);
+          } else {
+            // Something happened in setting up the request that triggered an Error
+            console.log('Error', error.message);
+          }
+
+          if (model.current && ['roleplay', 'roleplaylite'].includes(model.current)) {
             console.warn(
               '(i) sendMessage() GPT API Failure -- Fallback to GPT3',
-              { model, error: `${error.code}: ${error.message}` },
+              { model: model.current, error: `${error.code}: ${error.message}` },
             )
             analyticsCatchErrorEvent(error, { dev: 'fallback to GPT3' })
             return sendFallback(messages, error)
@@ -139,14 +135,14 @@ export default function useGPT(personaId: string) {
               message: error.message,
             })
             console.error(
-              `(i) sendMessage() GPT API Failure: ${error.code}: ${error.message}  ${error.stack}`,
-              { model, error },
+              `(i) sendMessage() GPT API Failure: ${error.code}: ${error.message}  ${JSON.stringify(error.request)}`,
+              { model: model.current, error },
             )
             //Pass Through
             throw error
           }
         }),
-    [personaId, send, sendFallback],
+    [analyticsCatchErrorEvent, analyticsEvent, personaId, send, sendFallback],
   )
 
   const mutation = useMutation({
@@ -154,7 +150,7 @@ export default function useGPT(personaId: string) {
   })
 
   return {
-    sendMessage: mutation.mutate,
+    sendMessages: mutation.mutate,
     ...mutation,
   }
 }

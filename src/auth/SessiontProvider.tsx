@@ -29,6 +29,7 @@ const fn = {
 type SessionData = {
   initializing: boolean
   user?: FirebaseAuthTypes.User
+  token?:string
   error?: any
 } & typeof fn
 
@@ -85,11 +86,14 @@ async function onGoogleButtonPress() {
 
 let once = true
 
+const fetchToken = async (user: FirebaseAuthTypes.User) => await user.getIdToken();
+
 export const SessionProvider: React.FC<{
   children: ReactNode
 }> = ({ children }) => {
   const [initializing, setInitializing] = useState(true)
   const [user, setUser] = useState<FirebaseAuthTypes.User>()
+  const [token, setToken] = useState<string>()
 
   useEffect(() => {
     const subscriber = auth().onAuthStateChanged(_user => {
@@ -101,6 +105,14 @@ export const SessionProvider: React.FC<{
     return subscriber // unsubscribe on unmount
   }, [initializing, user])
 
+  useEffect(() =>{
+    
+    if (user) {
+      fetchToken(user).then(token => setToken(token))
+    } else {
+      setToken(undefined)
+    }
+  },[])
   useEffect(() => {
     if (user && once) {
       once = false
@@ -118,6 +130,7 @@ export const SessionProvider: React.FC<{
       value={{
         initializing,
         user,
+        token,
         ...fn,
       }}>
       {children}

@@ -2,10 +2,11 @@ import { GiftedChat, type IMessage } from 'react-native-gifted-chat'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Stack, useLocalSearchParams } from 'expo-router'
 import { ChatHeader } from '~/components/ChatHeader'
-import { personas } from '~/stub/persona'
+import { personas, PersonaId } from '~/stub/persona'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import useGPT from '~/gpt/useGPT'
 
-type SearchParams = { id: string }
+type SearchParams = { id: PersonaId }
 
 const ChatNavigationScree: React.FunctionComponent<SearchParams> = ({ id }) => {
   const HeaderTitle = useMemo(() => {
@@ -35,6 +36,8 @@ const ChatNavigationScree: React.FunctionComponent<SearchParams> = ({ id }) => {
 export default function () {
   const { id } = useLocalSearchParams<SearchParams>()
   const [messages, setMessages] = useState<IMessage[]>([])
+  const { sendMessages } = useGPT(id)
+
   useEffect(() => {
     setMessages([
       // Mock message data
@@ -50,11 +53,20 @@ export default function () {
       },
     ])
   }, [])
-  const onSend = useCallback((messagesToSend: IMessage[] = []) => {
-    setMessages(previousMessages =>
-      GiftedChat.append(previousMessages, messagesToSend),
-    )
-  }, [])
+  const onSend = useCallback(
+    (messagesToSend: IMessage[] = []) => {
+      sendMessages(
+        messagesToSend.map(message => ({
+          content: message.text,
+          role: 'user',
+        })),
+      )
+      setMessages(previousMessages =>
+        GiftedChat.append(previousMessages, messagesToSend),
+      )
+    },
+    [sendMessages],
+  )
 
   return (
     <SafeAreaView className='w-full h-full bg-green-50'>

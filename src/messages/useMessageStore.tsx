@@ -1,32 +1,13 @@
-import { useCallback, useContext } from 'react';
+import { useCallback } from 'react';
 import { useEffect, useState } from 'react';
-import { ChatCompletionRole } from "openai/resources/chat/completions";
 import { Profile } from '~/stub/persona';
+import { Message } from './types';
 
-export interface FullMessage {
-    timestamp: number;
-    role: ChatCompletionRole;
-    content: string;
-}
-
-export type GPTMessage = Omit<FullMessage,'timestamp'>;
-
-export interface IuseMessageStoreProps {
-    id: string;
-}
-
-export interface IuseMessageStore {
-    chat: { [id: string]: FullMessage[] };
-    messagsAppend: (messages: FullMessage) => void;
-}
-
-
-/// Sanitize Messages Array Before Sending out on API
-export const sanitizeMessages =  (messages: FullMessage[]): GPTMessage[] => messages 
-    ? messages?.map(message => { 
-        return {role: message.role, content: message.content}; 
-    }) 
-    : [];
+const removeField = <T, K extends keyof T>(field: K) => (object: T): Omit<T,K> => {
+    const c = { ... object};
+    delete c[field];
+    return c as Omit<T, K>;
+};
 
 
 /**
@@ -34,8 +15,8 @@ export const sanitizeMessages =  (messages: FullMessage[]): GPTMessage[] => mess
  */
 export default function useMessageStore(persona: Profile, isDevMode: boolean): IuseMessageStore {
     // const [messages, setMessages] = useState<FullMessage[]>([]);    
-    const [chat, setChat] = useState<{ [id: string]: FullMessage[] }>({});
-    const [messages, setMessages] = useState<FullMessage[]>([]);
+    const [chat, setChat] = useState<{ [id: string]: Message[] }>({});
+    const [messages, setMessages] = useState<Message[]>([]);
     const [waitingCount, setWaitingCount] = useState<{ [id: string]: number }>({});
     const [isWaiting, setIsWaiting] = useState(false);
 
@@ -51,7 +32,7 @@ export default function useMessageStore(persona: Profile, isDevMode: boolean): I
         });
     }, [persona.id]);
 
-    const messagsAppend = (message: FullMessage) => {
+    const messagsAppend = (message: Message) => {
         const id = persona.id;
         setChat(current => {
             const clone = { ...current };
@@ -65,7 +46,7 @@ export default function useMessageStore(persona: Profile, isDevMode: boolean): I
             return clone;
         });
         //Log
-        isDevMode && console.log(`(i) messageAdd() Message Added by:'${message.role}'`, { content: message.content });
+        isDevMode && console.log(`(i) messageAdd() Message Added by:'${message.sender}'`, { content: message.content });
     }
 
     useEffect(() => {
@@ -76,7 +57,7 @@ export default function useMessageStore(persona: Profile, isDevMode: boolean): I
                 //Init Array
                 if (persona.intro) {
                     messagsAppend({
-                        role: "assistant",
+                        sender: "assistant",
                         content: persona.intro,
                         timestamp: new Date().getTime(),
                     });
@@ -92,7 +73,9 @@ export default function useMessageStore(persona: Profile, isDevMode: boolean): I
     useEffect(() => setIsWaiting?.(!!waitingCount[persona.id] && waitingCount[persona.id] > 0), [waitingCount, persona.id])
 
     //Wrapper for Entire Convo Send Before Processing
-    const convoSend = async (messages: FullMessage[]): Promise<void> => convoSendGPT(sanitizeMessages(messages))
+    const convoSend = async (messages: Message[]): Promise<void> => convoSendGPT(
+        messages.map(removeField('content'))
+    )
 
     /// Send Message to Model (Server)
     const convoSendGPT = async (messages: GPTMessage[]): Promise<void> => {

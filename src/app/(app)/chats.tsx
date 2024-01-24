@@ -16,7 +16,7 @@ export default function Home() {
           },
           // https://reactnavigation.org/docs/headers#replacing-the-title-with-a-custom-component
           // headerTitle: HeaderTitle,
-          headerRight: HeaderSettingsButton,
+          headerRight: () => <HeaderSettingsButton />,
         }}
       />
       <List />
